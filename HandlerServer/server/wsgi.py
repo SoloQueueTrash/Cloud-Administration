@@ -39,7 +39,7 @@ def geoClosest(ip_list, client):
 
     for i in range(len(ip_list)):
         data = geo_distance(coords1, ip_list[i])
-        
+
         if(min > int(data[0])):
             min = int(data[0])
             response_ip = data[1]
@@ -52,37 +52,19 @@ def get_country(ip):
     geo_country = response.get("country")
     return geo_country   
 
-def getFile(bucket_file):
-    os.environ["GOOGLE_APPLICATION_CREDENTIALS"]= 'credentials.json'
-    client = storage.Client('cloudsa2023')
-    # Create a bucket object for our bucket
-    bucket = client.get_bucket('eu_asc_project')
-    # Create a blob object from the filepath
-    #print(f"FILE {bucket_file}")
-    blob = bucket.blob(bucket_file)
-    file_bytes = blob.download_as_bytes()
-    #print("FILE OK!")
-    return file_bytes
-
 def application(env, start_response):
     
     # Get the client IP address from the X-Forwarded-For header
     x_forwarded_for = env.get('HTTP_X-Forwarded-For')
     x_real_ip = env.get('HTTP_X_REAL_IP')
-    path = env.get('PATH_INFO', '')
 
     ip_list = ["34.175.82.31", "124.108.114.218", "156.129.83.106", "62.25.188.217"]
-    file = os.path.basename(path)
-    #closest_ip = geoClosest(ip_list, x_real_ip)
+    closest_ip = geoClosest(ip_list, x_real_ip)
     country = get_country(x_real_ip)
-    response_body = getFile(file)
-    #start = b"<!DOCTYPE html><h2>"
-    #end = b"</h2>\n"
+
     status = '200 OK'
-    headers = [('Content-type', 'application/octet-stream'), ('Content-Disposition', f'attachment; filename={os.path.basename(path)}'),('Content-Length', str(len(response_body)))]
-   
-    #response_body = f'The client ip is {x_real_ip}\nThe country is: {country}\nPath to file: {filename}'.encode('utf-8')
+    headers = [('Content-type', 'text/plain')]   
+    response_body = "The client ip is " + x_real_ip + "\nThe closest server's IP address is " + closest_ip +" in " + country +"\n"
 
     start_response(status, headers)
-    #return [start + response_body + end]
     return [response_body]
