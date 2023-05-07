@@ -4,6 +4,7 @@ from flask import Flask, request, jsonify
 import hashlib
 from google.cloud import storage
 import os
+import json
 
 app = Flask(__name__)
 
@@ -12,6 +13,37 @@ ip_list = ["34.175.82.31", "124.108.114.218", "156.129.83.106", "62.25.188.217"]
 @app.errorhandler(404)
 def not_found(error):
     return 'Error: This route is not defined\n', 404
+
+
+def disseminate_file(source_bucket, source_blob, filename):
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"]= 'credentials.json'
+    client = storage.Client('cloudsa2023')
+
+    with open('buckets.json', 'r') as file:
+        json_data = json.load(file)
+
+    for i in range(len(json_data)):  
+        print(json_data[i]['region'])      
+        destination_bucket = client.get_bucket(str(json_data[i]['region']))
+
+        # Copy the source blob to the destination bucket
+        source_bucket.copy_blob(
+            source_blob,
+            destination_bucket,
+            new_name = filename
+        )
+
+def delete_disseminated(filename):
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"]= 'credentials.json'
+    client = storage.Client('cloudsa2023')
+
+    with open('buckets.json', 'r') as file:
+        json_data = json.load(file)
+
+    for i in range(len(json_data)):        
+        bucket = client.get_bucket(str(json_data[i]['region']))
+        blob = bucket.blob(filename)
+        blob.delete()
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -33,7 +65,9 @@ def upload_file():
     blob = bucket.blob(filename)
 
     blob.upload_from_filename(filename)
-    
+
+    disseminate_file(bucket, blob, filename)
+
     return jsonify({'message': 'File uploaded successfully', 'filename' : filename})
 
 @app.route('/delete/<string:file>', methods=['DELETE'])
@@ -44,6 +78,7 @@ def delete_file(file):
 
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"]= 'credentials.json'
     client = storage.Client('cloudsa2023')
+
     bucket = client.get_bucket('eu_asc_project')
     
     if not bucket.blob(file).exists():
@@ -51,7 +86,8 @@ def delete_file(file):
     
     blob = bucket.blob(file)
     blob.delete()
-    
+    delete_disseminated(file)
+
     return jsonify({'message': 'File deleted successfully', 'filename' : file})
 
 @app.route('/servers')
@@ -118,6 +154,7 @@ def authenticate_request():
 def calculate_sha256(input_string):
     sha256_hash = hashlib.sha256(input_string.encode()).hexdigest()
     return sha256_hash
+
 
 if __name__ == '__main__':
     # Generate a self-signed certificate

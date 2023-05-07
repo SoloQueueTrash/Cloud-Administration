@@ -16,7 +16,7 @@ def getFile(file):
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"]= 'credentials.json'
     client = storage.Client('cloudsa2023')
     # Create a bucket object for our bucket
-    bucket = client.get_bucket('eu_asc_project')
+    bucket = client.get_bucket('asc_us-central1')
     # Check if file exists in the bucket
 
     if not bucket.blob(file).exists():

@@ -1,0 +1,12 @@
+[    
+  {"region": "asc_us-central1"},    
+  {"region": "asc_us-west1"},    
+  {"region": "asc_us-east1"},    
+  {"region": "asc_southamerica-east1"},    
+  {"region": "asc_europe-southwest1"},    
+  {"region": "asc_europe-west2"},    
+  {"region": "asc_europe-west3"},    
+  {"region": "asc_australia-southeast1"},    
+  {"region": "asc_asia-northeast1"},    
+  {"region": "asc_asia-south1"}
+]
