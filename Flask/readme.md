@@ -21,6 +21,15 @@ curl -X DELETE -H "X-API-Key: f977c8ba19c5baf83b457b31a676f9020c9991ee15f357e4a3
 ```bash
 curl http://IP:PORT/servers
 ```
+
+### Versão python (Flask/Run/sendRequests.py)
+```bash
+python3 sendRequests.py -POST filename
+python3 sendRequests.py -DELETE filename
+python3 sendRequests.py -SERVERS
+```
+
+
 # Global Servers
 ## Funções
 - Retornar ficheiros
