@@ -3,14 +3,22 @@ import os
 from google.cloud import storage
 from io import BytesIO
 import mimetypes
+# pip install Flask-Caching
+from flask_caching import Cache
 
 app = Flask(__name__)
+
+app.config['CACHE_TYPE'] = 'simple'
+app.config['CACHE_DEFAULT_TIMEOUT'] = 3600  # Cache timeout set to 1 hour
+
+cache = Cache(app)
 
 @app.errorhandler(404)
 def not_found(error):
     return 'Error: This route is not defined\n', 404
 
 @app.route('/files/<string:file>')
+@cache.cached()  # Cache the result of this route
 def getFile(file):
     print("FILE:" + file)
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"]= 'credentials.json'
@@ -27,7 +35,6 @@ def getFile(file):
     file_stream = BytesIO(file_bytes)
 
     mimetype = mimetypes.guess_type(file)[0]
-    print("MIME" + mimetype)
     if mimetype is None:
         mimetype = 'application/octet-stream'
 
