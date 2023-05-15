@@ -8,11 +8,15 @@ import requests
 import math
 import json
 import hashlib
+import datetime
 
 # Load regions information from JSON file
 file = open('regions.json')
 regions = json.load(file)
 file.close()
+
+# Round robin load balancer
+next_server_index = 0
 
 # ====================================================================
 
@@ -75,6 +79,41 @@ def getIPlist(region):
     # use the instances().list() method to list all instances in the region
     result = compute.instances().list(project=project, zone=region).execute()
 
+    alive = []
+    for instance in result['items']:
+    #    print(f'Instance name: {instance["name"]}')
+    #    print(f'Instance status: {instance["status"]}')
+        if instance.get("status") == "RUNNING":
+            #print(f'External IP address: {instance[ "networkInterfaces"][0]["accessConfigs"][0]["natIP"]}')
+            alive.append(instance[ "networkInterfaces"][0]["accessConfigs"][0]["natIP"])
+
+    global next_server_index
+    num_servers = len(alive)
+
+    if(num_servers == 0):
+        return []
+
+    # Round robin
+    server_ips = [alive[(next_server_index + i) % num_servers] for i in range(num_servers)]
+
+    # Increment the next server index and wrap around to 0 if we reach the end of the list
+    next_server_index = (next_server_index + 1) % num_servers
+    
+    return server_ips
+
+
+'''
+def getIPlist(region):
+
+    # set the project ID
+    project = 'cloudsa2023'
+
+    # create the compute engine service client
+    compute = build('compute', 'v1', credentials=credentials)
+
+    # use the instances().list() method to list all instances in the region
+    result = compute.instances().list(project=project, zone=region).execute()
+
     # shuffle the results
     random.shuffle(result['items'])
 
@@ -88,10 +127,10 @@ def getIPlist(region):
             res.append(instance[ "networkInterfaces"][0]["accessConfigs"][0]["natIP"])
 
     return res
-
+'''
 # ====================================================================
 
-
+'''
 def disseminate_file(source_bucket, source_blob, filename):
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"]= 'credentials.json'
     client = storage.Client('cloudsa2023')
@@ -121,7 +160,7 @@ def delete_disseminated(filename):
         bucket = client.get_bucket(str(json_data[i]['region']))
         blob = bucket.blob(filename)
         blob.delete()
-
+'''
 
 # ====================================================================
 
@@ -148,7 +187,27 @@ app = Flask(__name__)
 def not_found(error):
     return 'Error: This route is not defined\n', 404
 
-@app.route('/upload', methods=['POST'])
+@app.route('/upload/<string:file>', methods=['GET'])
+def upload_file(file):
+    
+    if not authenticate_request():
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    client = storage.Client(credentials=credentials)
+
+    bucket = client.bucket("asc_europe-southwest1")
+    blob = bucket.blob(file)
+
+    url = blob.generate_signed_url(
+        version="v4",
+        expiration=datetime.timedelta(minutes=1),
+        method="PUT",
+    )
+
+    return jsonify({'message': 'URL created with success', 'url' : url})
+
+'''
+@app.route('/upload', methods=['GET'])
 def upload_file():
 
     if not authenticate_request():
@@ -157,21 +216,19 @@ def upload_file():
     if 'file' not in request.files:
         return jsonify({'error': 'No file uploaded'}), 400
 
-    file = request.files['file']
-
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"]= 'credentials.json'
+
+    upload_file = request.files.get('file')
+    content_type = upload_file.content_type
+        
     client = storage.Client('cloudsa2023')
-    bucket = client.get_bucket('eu_asc_project')
+    bucket = client.get_bucket('asc_europe-southwest1')
     
-    filename = file.filename
-
-    blob = bucket.blob(filename)
-
-    blob.upload_from_filename(filename)
-
-    disseminate_file(bucket, blob, filename)
-
-    return jsonify({'message': 'File uploaded successfully', 'filename' : filename})
+    blob = bucket.blob(upload_file.filename)
+    blob.upload_from_string(upload_file.read(), content_type=content_type)
+    
+    return jsonify({'message': 'File uploaded successfully', 'filename' : upload_file.filename})
+'''
 
 @app.route('/delete/<string:file>', methods=['DELETE'])
 def delete_file(file):
@@ -182,16 +239,18 @@ def delete_file(file):
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"]= 'credentials.json'
     client = storage.Client('cloudsa2023')
 
-    bucket = client.get_bucket('eu_asc_project')
+    bucket = client.get_bucket('asc_europe-southwest1')
     
     if not bucket.blob(file).exists():
         return jsonify({'error': 'File doesn\'t exist in the bucket'}), 404
     
     blob = bucket.blob(file)
     blob.delete()
-    delete_disseminated(file)
+    
+    #delete_disseminated(file)
 
     return jsonify({'message': 'File deleted successfully', 'filename' : file})
+
 
 @app.route('/')
 def hello():
@@ -212,7 +271,6 @@ def handle_ip():
     ip_address = request.headers['X-Forwarded-For']
     myIP = ip_address.split(',')
 
-    #ip_address = "2.82.128.83"
     closestServer = geoClosestFromRegions(myIP[0])
     ipList = getIPlist(closestServer)
 
