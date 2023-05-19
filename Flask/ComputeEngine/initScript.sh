@@ -143,8 +143,11 @@ events {
 
 http {
         server {
-                listen 80;
-                server_name example.com;
+                #listen 80;
+                listen 443 ssl;
+                server_name 34.175.243.40;
+                ssl_certificate /etc/nginx/server.crt;
+                ssl_certificate_key /etc/nginx/server.key;
 
                 #proxy_set_header X-Real-IP \$remote_addr;
                 #proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;

@@ -22,7 +22,7 @@ def serverRequest():
 
     headers = {'X-Forwarded-For': myIP}
 
-    response = requests.get(url + path, headers=headers)
+    response = requests.get(url + path , headers=headers, verify=False)
     
     return response
 
