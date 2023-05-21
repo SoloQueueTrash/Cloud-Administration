@@ -1,0 +1,6 @@
+Flask==2.2.2
+requests==2.28.1
+ptvsd==4.3.2 # Required for debugging.
+google-auth>=1.16.0,<2dev
+google-api-python-client==2.1.0
+google-cloud-storage==2.9.0
