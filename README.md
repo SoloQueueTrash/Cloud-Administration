@@ -1,6 +1,5 @@
 # Cloud Systems Administration Project
 
-## Introduction
 
 The project aims to create a decentralized service using Google Cloud tools to deliver content globally with low latency through a Content Delivery Network (CDN).
 
